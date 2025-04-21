@@ -1,0 +1,30 @@
+vision_encoder:
+    input_size: [1, 96, 96, 96] # [C, H, W, D]
+    name: "swinvit"
+    swinvit:
+        in_chans: 1
+        embed_dim: 48
+        window_size: 7
+        patch_size: 2
+        depths: [2, 8, 8, 8]
+        num_heads: [4, 8, 16, 32]
+        mlp_ratio: 4.0
+        qkv_bias: True
+        drop_rate: 0.0
+        attn_drop_rate: 0.0
+        drop_path_rate: 0.0
+        norm_layer: "nn.LayerNorm"
+        patch_norm: False
+        use_checkpoint: True
+        spatial_dims: 3
+        downsample: "merging"
+        use_v2: False
+        pretrained_ckpt: ""
+
+dataset: "ctorg"
+
+pretrained_ckpt: "./checkpoints/visiontext_topitc_BtSv/vl_ssl-swinvit-m3d_cap-dr1.0-E30-best/pytorch_model.bin"
+
+
+freeze:
+    vision_encoder: False

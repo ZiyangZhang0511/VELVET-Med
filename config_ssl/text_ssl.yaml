@@ -1,0 +1,43 @@
+
+enable_txt_mlm: True
+text_model:
+    # "emilyalsentzer/Bio_ClinicalBERT" or "microsoft/BiomedVLP-CXR-BERT-general"
+    # pretrained_weights: "microsoft/BiomedVLP-CXR-BERT-general"
+    name: "sent_bert" # or base_bert
+    hidden_size: 768
+    intermediate_size: 3072
+    max_position_embeddings: 512
+    layer_norm_eps: 1.0e-12
+    hidden_dropout_prob: 0.1
+    num_hidden_layers: 6
+    add_cross_attention: False
+    chunk_size_feed_forward: 256
+    is_decoder: False
+    num_attention_heads: 6
+    attention_probs_dropout_prob: 0.1
+    hidden_act: "gelu"
+    output_attentions: False
+    output_hidden_states: True
+    use_return_dict: True
+    use_cache: False
+    mlm_probability: 0.15
+    layer_for_txt_ssl: 6
+    # pretrained_ckpt: ""
+    # pretrained_ckpt: "./checkpoints/official_ckpts/bert_base_uncased.pth" 
+    pretrained_ckpt: "./checkpoints/official_ckpts/biomedvlp-cxr-bert-general.bin"
+
+    layer_aggregate_fn: "sum" # or "mean"
+    report_aggregate_fn: "none" # "sum" or "mean"
+    sentence_aggregate_fn: "none" # "sum" or "mean"
+    word_aggregate_fn: "none" # "sum" or "mean"
+
+    num_decoder_layers: 0
+    
+
+
+tokenizer:
+    base_type: "microsoft/BiomedVLP-CXR-BERT-general" # cls_token_id: 2; sep_token_id: 3; mask_token_id: 4;
+    max_len_report: 512
+    max_len_sentence: 50
+    max_num_sentences: 50
+    sentence_modeling: False

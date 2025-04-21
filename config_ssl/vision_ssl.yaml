@@ -1,0 +1,51 @@
+vision_encoder:
+    input_size: [1, 96, 96, 96] # [C, H, W, D]
+    name: "swinvit"
+    swinvit:
+        in_chans: 1
+        embed_dim: 48
+        window_size: 7
+        patch_size: 2
+        depths: [2, 2, 2, 2]
+        num_heads: [3, 6, 12, 24]
+        mlp_ratio: 4.0
+        qkv_bias: True
+        drop_rate: 0.0
+        attn_drop_rate: 0.0
+        drop_path_rate: 0.0
+        norm_layer: "nn.LayerNorm"
+        patch_norm: False
+        use_checkpoint: True
+        spatial_dims: 3
+        downsample: "merging"
+        use_v2: False
+        # pretrained_ckpt: ""
+        pretrained_ckpt: "./checkpoints/official_ckpts/model_swinvit.pt" 
+
+
+vision_augment:
+    max_drop: 0.3
+    max_block_sz: 0.25
+    tolr: 0.05
+
+
+vision_ssl_module:
+    contrastive_bottleneck: "pooling" # choose from "pooling", "convolution", "self-attention"
+    contrastive_hidden_dim: 512
+    rotation_bottleneck: "pooling" # choose from "pooling", "convolution", "self-attention"
+    reconstruction_bottleneck: "unet" # choose from "deconv" or "unet"
+    enable_contras: True
+    enable_rot: True
+    enable_recon: True
+
+
+vision_ssl_loss:
+    contras_loss_temperature: 0.5
+    learnable_temp: False
+    rot_loss: "cross_entropy"
+    recon_loss: "l1" # choose from "l1", "l2", "smooth_l1"
+    alpha_contras: 1.0
+    alpha_rot: 1.0
+    alpha_recon: 1.0
+
+save_recon_interval: 1000
