@@ -476,7 +476,7 @@ class VQAModel(nn.Module):
 if __name__ == "__main__":
     device = "cuda"
 
-    config_path = "./config_dt/close_vqa_yn_allitc_mmssl_BtSv.yaml" 
+    config_path = "./config_dt/rep_topitc_mmssl_BtSv.yaml" 
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
 
@@ -490,7 +490,7 @@ if __name__ == "__main__":
     mt_transforms = MonaiTransforms(num_samples=1)
     global_transforms = mt_transforms.load_vqa_transforms(mode="global")
 
-    dataset = M3DVQADataset(data_dir, csv_dir, global_transforms, data_ratio=1.0, task_type="close_vqa_yn", mode="val", config_path=config_path)
+    dataset = M3DVQADataset(data_dir, csv_dir, global_transforms, data_ratio=1.0, task_type="report_gen", mode="val", config_path=config_path)
     dataloader = DataLoader(dataset, batch_size=2, num_workers=0, collate_fn=collate_fn)
 
     first_batch = next(iter(dataloader))
@@ -499,16 +499,16 @@ if __name__ == "__main__":
         if key not in "answer":
             first_batch[key] = first_batch[key].to(device)
 
-    ckpt_path = "./checkpoints_dt/close_vqa_yn_allitc_mmssl_BtSv/close_vqa_yn-m3d_vqa-dr1.0-FvisTruetxtTruemmFalse-E4-best/pytorch_model.bin"
-    ckpt = torch.load(ckpt_path, map_location=device, weights_only=True)
-    model.load_state_dict(ckpt, strict=True)
+    # ckpt_path = "./checkpoints_dt/close_vqa_yn_allitc_mmssl_BtSv/close_vqa_yn-m3d_vqa-dr1.0-FvisTruetxtTruemmFalse-E4-best/pytorch_model.bin"
+    # ckpt = torch.load(ckpt_path, map_location=device, weights_only=True)
+    # model.load_state_dict(ckpt, strict=True)
 
     # re = model(first_batch)
     # print(re)
 
     model.eval()
-    # re = model.test_one_step(first_batch)
-    # print(re)
+    re = model.test_one_step(first_batch)
+    print(re)
 
-    re = model.test_on_dataloader(dataloader)
-    print_dict_content(re)
+    # re = model.test_on_dataloader(dataloader)
+    # print_dict_content(re)

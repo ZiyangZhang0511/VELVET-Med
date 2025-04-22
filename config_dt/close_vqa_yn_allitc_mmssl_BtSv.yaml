@@ -82,6 +82,7 @@ downstream_task:
         access_token: "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"
         max_length: 200
         min_length: 1
+        rank: 8
 
         # {'bos_token': '<|begin_of_text|>', 'eos_token': '<|eot_id|>', 'pad_token': '<|eot_id|>'}
         # bos_token_id: 128000, eos_token_id: 128009, pad_token_id: 0

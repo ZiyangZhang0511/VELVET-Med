@@ -41,7 +41,7 @@ def remove_directory(dir_path):
 
 def get_dt_dataset(args):
 
-    if args.dataset_name == "m3d_vqa" and args.downstream_type in ["close_vqa_yn", "open_vqa_yn", "close_vqa_mc", "open_vqa_mc"]:
+    if args.dataset_name == "m3d_vqa" and args.downstream_type in ["close_vqa_yn", "open_vqa_yn", "close_vqa_mc", "open_vqa_mc", "report_gen"]:
         data_root = os.path.abspath(DataPath.M3D_CAP)
         data_dir = os.path.join(data_root, "nii_down")
         csv_dir = os.path.abspath(DataPath.M3D_VQA)

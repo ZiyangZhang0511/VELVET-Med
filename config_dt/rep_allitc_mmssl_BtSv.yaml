@@ -15,7 +15,7 @@ vision_encoder:
         drop_path_rate: 0.0
         norm_layer: "nn.LayerNorm"
         patch_norm: False
-        use_checkpoint: True
+        use_checkpoint: False
         spatial_dims: 3
         downsample: "merging"
         use_v2: False
@@ -60,12 +60,11 @@ tokenizer:
     max_len_report: 512
     max_len_sentence: 200
     max_num_sentences: 50
-    sentence_modeling: False
+    sentence_modeling: True
 
 
-pretrained_ckpt: "./checkpoints/visiontext_topitc_mmssl_BtSv/vl_ssl-swinvit-m3d_cap-dr1.0-E26-best/pytorch_model.bin"
-
-
+pretrained_ckpt: "./checkpoints/visiontext_allitc_mmssl_BtSv/vl_ssl-swinvit-m3d_cap-dr1.0-E28-best/pytorch_model.bin"
+# pretrained_ckpt: ""
 
 freeze:
     vision_encoder: True
@@ -75,13 +74,13 @@ freeze:
     
 
 downstream_task:
-    task_type: "open_vqa_mc"  # choose from "cls_vqa_yn", "close_vqa_yn", "open_vqa_yn", "close_vqa_mc", "open_vqa_mc"
+    task_type: "report_gen"  # choose from "cls_vqa_yn", "close_vqa_yn", "open_vqa_yn", "close_vqa_mc", "open_vqa_mc"
     txt_hidden_size: 768
     llm:
         hidden_size: 4096
         model_id: "ContactDoctor/Bio-Medical-Llama-3-8B"
         access_token: "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"
-        max_length: 250
+        max_length: 750
         min_length: 1
         rank: 8
 
