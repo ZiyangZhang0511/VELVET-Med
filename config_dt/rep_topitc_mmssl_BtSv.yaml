@@ -80,7 +80,7 @@ downstream_task:
     llm:
         hidden_size: 4096
         model_id: "ContactDoctor/Bio-Medical-Llama-3-8B"
-        access_token: "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"
+        access_token:
         max_length: 750
         min_length: 1
         rank: 8
