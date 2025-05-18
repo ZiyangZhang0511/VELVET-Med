@@ -136,7 +136,7 @@ def get_args():
 
     parser.add_argument(
         "--info_data_path", 
-        default="/home/olg7848/p32335/my_research/vlp_ct/data/m3d_cap/ct_case_info_1.csv",
+        default="./data/m3d_cap/ct_case_info_1.csv",
         type=str,
     )
     parser.add_argument("--target_case_id", default=None, nargs="+", type=str)
