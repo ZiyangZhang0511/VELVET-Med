@@ -39,7 +39,7 @@ class MonaiTransforms:
                     a_min=0, a_max=255, b_min=0.0, b_max=1.0, clip=True,
                 ),
                 mt.Spacing(
-                    pixdim=(1.0, 1.0, 1.0),
+                    pixdim=(1.0, 1.0, 0.5),
                     mode=("bilinear"),
                     min_pixdim=(1.0, 1.0, 1.0),
                     max_pixdim=None,
@@ -48,6 +48,14 @@ class MonaiTransforms:
                 mt.CropForeground(allow_smaller=False),
                 # mt.SpatialPad(spatial_size=[96, 96, 96]),
                 mt.Lambda(func=sample_and_resize),
+            ]),
+            "clip3d": mt.Compose([
+                mt.Orientation(axcodes="RAS"),
+                mt.ScaleIntensityRange(
+                    a_min=0, a_max=255, b_min=0.0, b_max=1.0, clip=True,
+                ),
+                mt.CropForeground(allow_smaller=False),
+                mt.Resize(spatial_size=(256, 256, 32), mode="area"),
             ]),
         }
         

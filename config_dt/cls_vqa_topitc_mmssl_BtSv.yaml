@@ -66,8 +66,9 @@ pretrained_ckpt: "./checkpoints/visiontext_topitc_mmssl_BtSv/vl_ssl-swinvit-m3d_
 
 freeze:
     vision_encoder: True
-    text_model: True
+    text_encoder: True
     mm_adapter: False
+    mm_encoder: False
 
 downstream_task:
     task_type: "cls_vqa_yn"  # choose from "cls_vqa_yn", "close_vqa_yn", "open_vqa_yn", "close_vqa_mc", "open_vqa_mc"

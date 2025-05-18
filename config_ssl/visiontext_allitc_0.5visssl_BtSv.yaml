@@ -9,7 +9,7 @@ itc_module:
     alpha_sentence_itc: 1.0
     alpha_word_itc: 1.0
 
-    last_n_layers_for_itc: 1
+    last_n_layers_for_itc: 3
 
     similarity_type: "t" # choose from "tmb", "tb", "tm", "t"
 
@@ -24,7 +24,7 @@ mm_module:
 loss_weights:
     alpha_itc: 1.0
     alpha_mm_ssl: 1.0
-    alpha_vis_ssl: 1.0
+    alpha_vis_ssl: 0.5
     alpha_txt_ssl: 1.0
 
 
@@ -33,16 +33,16 @@ enable_modules:
     sentence_itc: True
     word_itc: True
 
-    mm_ssl: True
-    mm_match: True
-    mm_mlm: True
+    mm_ssl: False
+    mm_match: False
+    mm_mlm: False
 
     vision_ssl: True
     vision_contras: True
     vision_rot: True
     vision_recon: True
     
-    text_ssl: True
+    text_ssl: False
 
 
 vision_ssl:
@@ -108,7 +108,7 @@ text_ssl:
         max_position_embeddings: 512
         layer_norm_eps: 1.0e-12
         hidden_dropout_prob: 0.1
-        num_hidden_layers: 18
+        num_hidden_layers: 12
         add_cross_attention: False
         chunk_size_feed_forward: 256
         is_decoder: False
@@ -131,7 +131,7 @@ text_ssl:
         word_aggregate_fn: "none" # "sum" or "mean"
 
         layer_for_txt_ssl: 12
-        num_decoder_layers: 6
+        num_decoder_layers: 0
 
 
     tokenizer:

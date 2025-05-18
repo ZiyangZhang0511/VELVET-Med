@@ -10,7 +10,7 @@ from accelerate import DistributedDataParallelKwargs
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, Subset, ConcatDataset
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from pytorch_lightning import seed_everything
@@ -18,6 +18,7 @@ from pytorch_lightning import seed_everything
 from modeling.vqa_model import VQAModel
 from modeling.cls_model import CLSModel
 from modeling.seg_model import SEGModel
+from modeling.vqa_baseline import VQABaseline
 
 from utilities import utils
 from utilities.constants import SliceMap, ConfigPath, PretainSaveDir
@@ -41,6 +42,7 @@ def get_args():
     parser.add_argument("--downstream_type", type=str, choices=["cls_vqa_yn", "close_vqa_yn", "open_vqa_yn", "close_vqa_mc", "open_vqa_mc", "report_gen", "seg"])
     # parser.add_argument("--vision_encoder", type=str, default="none", choices=["swinvit", "vit", "none"])
     parser.add_argument("--dataset_name", type=str, choices=["m3d_cap", "m3d_vqa", "btcv", "abdomenct1k", "ctorg"])
+    parser.add_argument("--vqa_baseline", action="store_true")
 
     parser.add_argument("--num_workers", type=int, default=8)
     parser.add_argument("--batch_size", type=int, default=4)
@@ -50,7 +52,8 @@ def get_args():
 
     parser.add_argument("--data_ratio", type=float, default=1.0)
     parser.add_argument("--num_samples_per_volume", type=int, default=2)
-    parser.add_argument("--initial_lr", type=float, default=1e-5)
+    parser.add_argument("--initial_lr", type=float, default=2e-5)
+    parser.add_argument("--eta_min_lr", type=float, default=1e-8)
     parser.add_argument("--monitored_loss", type=str, default="loss")
     parser.add_argument("--validation_interval", type=int, default=1)
 
@@ -89,12 +92,12 @@ def train_function(model, train_dataloader, val_dataloader, args):
     ddp_kwargs = DistributedDataParallelKwargs(find_unused_parameters=True)
     accelerator = Accelerator(
         mixed_precision=args.mixed_precision,
-        # gradient_accumulation_steps=args.gradient_accumulation_steps,
+        gradient_accumulation_steps=args.gradient_accumulation_steps,
         # kwargs_handlers=[ddp_kwargs],
     )
     
-    optimizer = optim.AdamW(model.parameters(), lr=args.initial_lr, betas=(0.9, 0.98), weight_decay=0.02)
-    scheduler = CosineAnnealingLR(optimizer, len(train_dataloader)*args.num_epochs, eta_min=1e-8)
+    optimizer = optim.AdamW(model.parameters(), lr=args.initial_lr, betas=(0.9, 0.99), weight_decay=1e-4)
+    scheduler = CosineAnnealingLR(optimizer, len(train_dataloader)*args.num_epochs, eta_min=args.eta_min_lr)
 
     model, train_dataloader, optimizer, scheduler = accelerator.prepare(
         model, train_dataloader, optimizer, scheduler
@@ -116,8 +119,8 @@ def train_function(model, train_dataloader, val_dataloader, args):
 
 
     if args.restart_optimizer:
-        optimizer = optim.AdamW(model.parameters(), lr=args.initial_lr, betas=(0.9, 0.98), weight_decay=1e-5)
-        scheduler = CosineAnnealingLR(optimizer, len(train_dataloader)*args.num_epochs, eta_min=1e-8)
+        optimizer = optim.AdamW(model.parameters(), lr=args.initial_lr, betas=(0.9, 0.99), weight_decay=1e-4)
+        scheduler = CosineAnnealingLR(optimizer, len(train_dataloader)*args.num_epochs, eta_min=args.eta_min_lr)
         # scheduler = LinearWarmupCosineAnnealingLR(
         #     optimizer,
         #     warmup_epochs=len(train_dataloader)*10,
@@ -138,19 +141,19 @@ def train_function(model, train_dataloader, val_dataloader, args):
         for i, batch_data in enumerate(tqdm(train_dataloader)):
             # break
         
-            # with accelerator.accumulate(model):
-            for key in batch_data.keys():
-                if "answer" not in key:
-                    batch_data[key] = batch_data[key].to(accelerator.device)
-            
-            with accelerator.autocast():
-                loss_dict = model(batch_data)
-            loss = loss_dict["loss"]
+            with accelerator.accumulate(model):
+                for key in batch_data.keys():
+                    if "answer" not in key:
+                        batch_data[key] = batch_data[key].to(accelerator.device)
+                
+                with accelerator.autocast():
+                    loss_dict = model(batch_data)
+                loss = loss_dict["loss"]
 
-            optimizer.zero_grad()
-            accelerator.backward(loss)
-            optimizer.step()
-            scheduler.step()
+                optimizer.zero_grad()
+                accelerator.backward(loss)
+                optimizer.step()
+                scheduler.step()
             
             for loss_name, loss_value in loss_dict.items():
                 if loss_name not in epoch_loss_dict.keys():
@@ -160,7 +163,7 @@ def train_function(model, train_dataloader, val_dataloader, args):
             training_step += 1 * accelerator.num_processes
 
             if epoch < 2 and i % 1000 == 0:
-                utils.print_dict_content(epoch_loss_dict, f"Epoch-{epoch} step-{i} training results:", accelerator)
+                utils.print_dict_content(loss_dict, f"Epoch-{epoch} step-{i} training results:", accelerator)
 
         utils.print_dict_content(epoch_loss_dict, f"Epoch-{epoch} training results:", accelerator)
 
@@ -206,6 +209,8 @@ def main():
 
     ###======== prepare dataset and dataloader ========###
     train_dataset, val_dataset = utils.get_dt_dataset(args)
+    # subset = Subset(val_dataset, indices=list(range(0, 1000)))
+    # train_dataset = ConcatDataset([train_dataset, subset])
     print(len(train_dataset), len(val_dataset))
 
     # if args.dataset_name == "tcia_covid19":
@@ -230,7 +235,12 @@ def main():
         config["freeze"]["text_encoder"] = args.freeze_txt
         config["freeze"]["mm_encoder"] = args.freeze_mm
         config["freeze"]["mm_adapter"] = args.freeze_mm
-        model = VQAModel(config)
+
+        if args.vqa_baseline:
+            print("vb")
+            model = VQABaseline(config)
+        else:
+            model = VQAModel(config)
 
     elif args.downstream_type == "cls_vqa_yn":
         if args.config_path and os.path.isfile(args.config_path):
@@ -266,5 +276,5 @@ def main():
 
 
 if __name__ == "__main__":
-    seed_everything(1)
+    # seed_everything(1)
     main()

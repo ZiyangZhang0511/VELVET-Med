@@ -1,0 +1,23 @@
+vision_path: /projects/p32335/my_research/vlp_ct/data/m3d_cap/nii_down/ct_case_51-020570-Axial_non_contrast.nii.gz
+question: Where is the fat density and calcification component of the lesion located?
+answers: Right of the base of the lesion
+ours: Right side of the midline
+baseline: Left ventricle
+
+vision_path: /projects/p32335/my_research/vlp_ct/data/m3d_cap/nii_down/ct_case_34-013903-Coronal_non_contrast.nii.gz
+question: What CT phase is represented in this image?
+answers: Non-contrast
+ours: Non-contrast
+baseline: Arterial phase
+
+vision_path: /projects/p32335/my_research/vlp_ct/data/m3d_cap/nii_down/ct_case_58-023526-Sagittal_C__portal_venous_phase.nii.gz
+question: Where does the mass involve?
+answers: All of the above
+ours: All of the above
+baseline: Right paracolic gutter
+
+vision_path: /projects/p32335/my_research/vlp_ct/data/m3d_cap/nii_down/ct_case_00-000093-Axial_bone_window.nii.gz
+question: Where does the lamina papyracea abut due to the bony erosion caused by osteomyelitis?
+answers: Dilated
+ours: Dilatation
+baseline:Pericardial effusion

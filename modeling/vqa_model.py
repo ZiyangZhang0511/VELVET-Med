@@ -110,8 +110,8 @@ class VQAModel(nn.Module):
 
         ### configure generate kwargs ###
         self.generate_kwargs = {
-            "max_length": config["downstream_task"]["llm"]["max_length"],
-            "min_length": config["downstream_task"]["llm"]["min_length"],
+            "max_length": config["downstream_task"]["llm"]["gen_max_length"],
+            "min_length": config["downstream_task"]["llm"]["gen_min_length"],
         }
 
         
@@ -283,8 +283,9 @@ class VQAModel(nn.Module):
             cur_prompt_ids = torch.full((valid_length,), -100).to(self.device)
             cur_input_ids_lm = torch.cat([cur_prompt_ids, input_ids_lm[i]], dim=0)
             indices = torch.where(cur_input_ids_lm == 128009)[0]
-            cur_input_ids_lm[indices] = -100
-            cur_input_ids_lm[indices[0]] = 128009
+            if indices.numel() > 0:
+                cur_input_ids_lm[indices] = -100
+                cur_input_ids_lm[indices[0]] = 128009
             cur_input_ids_lm = cur_input_ids_lm[:max_length].unsqueeze(0)
             
             inputs_embeds_lm_list.append(cur_inputs_embeds_lm)
@@ -342,7 +343,7 @@ class VQAModel(nn.Module):
 
 
     @torch.no_grad
-    def test_one_step(self, batch_data):
+    def test_one_step(self, batch_data, requires_loss=True, requires_gen=True):
         volume_global = batch_data["volume_global"].to(self.device)
         input_ids = batch_data["input_ids"].to(self.device)
         token_type_ids = batch_data["token_type_ids"].to(self.device)
@@ -351,46 +352,126 @@ class VQAModel(nn.Module):
         attention_mask_lm = batch_data["attention_mask_lm"].to(self.device)
         bs = volume_global.shape[0]
         
-        mm_hidden_state = self.produce_mm_hidden_state(
-            volume_global,
-            input_ids,
-            attention_mask,
-            token_type_ids,
-        )
-        inputs_embeds_lm, attention_mask_lm, input_ids_lm = self.prepare_llm_input(
-            mm_hidden_state,
-            attention_mask,
-            input_ids_lm,
-            attention_mask_lm,
-        )
-        outputs = self.llm(
-            inputs_embeds=inputs_embeds_lm,
-            attention_mask=attention_mask_lm,
-        )
-        logits = outputs[0][:, :-1, :].contiguous()
-        target = input_ids_lm[:, 1:].contiguous()
+        if requires_loss:
+            mm_hidden_state = self.produce_mm_hidden_state(
+                volume_global,
+                input_ids,
+                attention_mask,
+                token_type_ids,
+            )
+            inputs_embeds_lm, attention_mask_lm, input_ids_lm = self.prepare_llm_input(
+                mm_hidden_state,
+                attention_mask,
+                input_ids_lm,
+                attention_mask_lm,
+            )
+            outputs = self.llm(
+                inputs_embeds=inputs_embeds_lm,
+                attention_mask=attention_mask_lm,
+            )
+            logits = outputs[0][:, :-1, :].contiguous()
+            target = input_ids_lm[:, 1:].contiguous()
 
-        loss = self.criterion(logits.view(-1, self.llm.config.vocab_size), target.view(-1))
+            loss = self.criterion(logits.view(-1, self.llm.config.vocab_size), target.view(-1))
+        else:
+            loss = None
 
         ### generate responces ###
-        prompt_embeddings = self.perceiver(mm_hidden_state)
-        pred_captions_batch = []
-        gt_captions_batch = batch_data["answer"]
-        for i, cur_attention_mask in enumerate(attention_mask):
-            valid_length = cur_attention_mask.sum().item()
-            valid_prompt_embeds = prompt_embeddings[i, :valid_length, :].unsqueeze(0)
-            # print("valid_prompt_embeds", valid_prompt_embeds.size())
-            pred_captions = self.generate(valid_prompt_embeds, **self.generate_kwargs)
-            pred_captions_batch.extend(pred_captions)
-            # cp_dict = compute_image_captioning_metric(pred_captions_all, gt_captions_all)
+        if requires_gen:
+            mm_hidden_state = self.produce_mm_hidden_state(
+                volume_global,
+                input_ids,
+                attention_mask,
+                token_type_ids,
+            )
+            prompt_embeddings = self.perceiver(mm_hidden_state)
+            pred_captions_batch = []
+            gt_captions_batch = batch_data["answer"]
+            if self.config_dt["task_type"] in ["report_gen", "close_vqa_yn", "open_vqa_yn", "close_vqa_mc", "open_vqa_mc"]:
+                for i, cur_attention_mask in enumerate(attention_mask):
+                    valid_length = cur_attention_mask.sum().item()
+                    valid_prompt_embeds = prompt_embeddings[i, :valid_length, :].unsqueeze(0)
+                    # print("valid_prompt_embeds", valid_prompt_embeds.size())
+                    pred_captions = self.generate(valid_prompt_embeds, **self.generate_kwargs)
+                    if len(pred_captions) > 1:
+                        pred_captions_batch.append(pred_captions)
+                    else:
+                        pred_captions_batch.extend(pred_captions)
+                    # cp_dict = compute_image_captioning_metric(pred_captions_all, gt_captions_all)
+            elif self.config_dt["task_type"] == "":
+                valid_length = attention_mask[0].sum().item()
+                # print(valid_length)
+                # print(attention_mask.sum(dim=1))
+                # valid_prompt_embeds = prompt_embeddings[:, :valid_length, :]
+                # # print("valid_prompt_embeds", valid_prompt_embeds.size())
+                # pred_captions = self.generate(valid_prompt_embeds, **self.generate_kwargs)
+                # pred_captions_batch.extend(pred_captions)
+        else:
+            gt_captions_batch = []
+            pred_captions_batch = []
             
-
         return {
             "loss": loss,
         }, {
             "pred_captions_batch": pred_captions_batch,
             "gt_captions_batch": gt_captions_batch,
         }
+
+    
+
+    @torch.no_grad
+    def test_on_dataloader(self, dataloader, gen_interval=20):
+
+        self.llm.model.use_cache = True
+        self.llm.model.gradient_checkpointing = False
+
+        final_dict = OrderedDict()
+
+        epoch_loss_dict = {}
+
+        pred_captions_all = []
+        gt_captions_all = []
+
+        loss_steps = 0
+        for i, batch_data in enumerate(tqdm(dataloader)):
+            # continue
+            requires_gen = True if i % gen_interval == 0 else False
+            requires_loss = True if i % 1 == 0 else False
+
+            loss_dict, output_dict = self.test_one_step(batch_data, requires_loss=requires_loss, requires_gen=requires_gen)
+
+            # process loss items
+            if loss_dict["loss"] is not None:
+                loss_steps += 1
+                for loss_name, loss_value in loss_dict.items():
+                    if loss_name not in epoch_loss_dict.keys():
+                        epoch_loss_dict[loss_name] = 0
+                    epoch_loss_dict[loss_name] += loss_value.item()
+            
+            if len(output_dict["gt_captions_batch"]) != 0:
+                pred_captions_all.extend(output_dict["pred_captions_batch"])
+                gt_captions_all.extend(output_dict["gt_captions_batch"])
+            # break
+
+        for loss_name, loss_value in epoch_loss_dict.items():
+            if loss_value is not None:
+                epoch_loss_dict[loss_name] = loss_value / loss_steps
+        final_dict.update(epoch_loss_dict)
+
+        if len(gt_captions_all) != 0:
+            # print(gt_captions_all)
+            # print(len(pred_captions_all))
+            # print(len(gt_captions_all))
+            nlg_dict = nlg_metrics(
+                pred_captions=pred_captions_all,
+                gt_captions=gt_captions_all,
+            )
+            final_dict.update(nlg_dict)
+
+        # print("pred_captions_all", pred_captions_all)
+        # print("len gt_captions_all", len(gt_captions_all))
+        
+        return final_dict
 
     @torch.no_grad
     def generate(
@@ -424,64 +505,54 @@ class VQAModel(nn.Module):
             generate_kwargs.get("max_length", 20) + prompt_embeds.shape[1] - 1
         )
         generate_kwargs["min_length"] = generate_kwargs.get("min_length", 0) + prompt_embeds.shape[1]
+        # print(generate_kwargs, generate_kwargs["max_length"])
 
         outputs = self.llm.generate(
             **inputs,
             **generate_kwargs,
+            # do_sample=False,            #  Disable sampling → deterministic, faster
+            # num_beams=1,                #  No beam search → faster (use greedy)
+            
+            num_beams=8,
+            no_repeat_ngram_size=2,
+            early_stopping=True,
+
+            # do_sample=True,
+            # top_k=50,
+            # top_p=0.90,
+            # num_return_sequences=1,
+
+            use_cache=True,
             pad_token_id=self.llm.config.eos_token_id,
         )
         # print(outputs)
 
         captions = self.llm_tokenizer.batch_decode(outputs, skip_special_tokens=True)
         captions = [caption.replace("<|begin_of_text|>", "").replace("<|eot_id|>", "") for caption in captions]
+        # print(len(captions))
         # print(captions)
-
         return captions
-
-    @torch.no_grad
-    def test_on_dataloader(self, dataloader):
-
-        final_dict = OrderedDict()
-
-        epoch_loss_dict = {}
-
-        pred_captions_all = []
-        gt_captions_all = []
-
-        for i, batch_data in enumerate(tqdm(dataloader)):
-
-            loss_dict, output_dict = self.test_one_step(batch_data)
-
-            # process loss items
-            for loss_name, loss_value in loss_dict.items():
-                if loss_name not in epoch_loss_dict.keys():
-                    epoch_loss_dict[loss_name] = 0
-                epoch_loss_dict[loss_name] += loss_value.item() / len(dataloader)
-            
-            pred_captions_all.extend(output_dict["pred_captions_batch"])
-            gt_captions_all.extend(output_dict["gt_captions_batch"])
-
-        nlg_dict = nlg_metrics(pred_captions_all, gt_captions_all)
-
-        final_dict.update(epoch_loss_dict)
-        final_dict.update(nlg_dict)
-
-        # print("pred_captions_all", pred_captions_all)
-        # print("gt_captions_all", gt_captions_all)
-        
-        return final_dict
 
 
 
 if __name__ == "__main__":
-    device = "cuda"
+    # from bert_score import list_models
+    # print(list_models())
 
-    config_path = "./config_dt/rep_topitc_mmssl_BtSv.yaml" 
+    device = "cuda:3"
+
+    config_path = "./config_dt/open_vqa_mc_allitc_mmssl_visssl_txtssl_BtSv_r32.yaml" 
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
 
     model = VQAModel(config).to(device)
+    model.device = device
     # print(model)
+
+    ckpt_path = "./checkpoints_dt/open_vqa_mc_allitc_mmssl_visssl_txtssl_BtSv_r32/open_vqa_mc-m3d_vqa-dr0.2-FvisTruetxtTruemmFalse-E9/pytorch_model.bin"
+    # ./checkpoints_dt/open_vqa_mc_allitc_mmssl_visssl_txtssl_BtSv_r32/open_vqa_mc-m3d_vqa-dr0.2-FvisTruetxtTruemmFalse-E3-best/pytorch_model.bin
+    ckpt = torch.load(ckpt_path, map_location=device, weights_only=True)
+    model.load_state_dict(ckpt, strict=True)
 
     data_root = os.path.abspath(DataPath.M3D_CAP)
     data_dir = os.path.join(data_root, "nii_down")
@@ -490,25 +561,20 @@ if __name__ == "__main__":
     mt_transforms = MonaiTransforms(num_samples=1)
     global_transforms = mt_transforms.load_vqa_transforms(mode="global")
 
-    dataset = M3DVQADataset(data_dir, csv_dir, global_transforms, data_ratio=1.0, task_type="report_gen", mode="val", config_path=config_path)
-    dataloader = DataLoader(dataset, batch_size=2, num_workers=0, collate_fn=collate_fn)
+    dataset = M3DVQADataset(data_dir, csv_dir, global_transforms, data_ratio=0.1, task_type="open_vqa_mc", mode="val", config_path=config_path)
+    dataloader = DataLoader(dataset, batch_size=4, num_workers=8, collate_fn=collate_fn)
 
-    first_batch = next(iter(dataloader))
-    # print(first_batch["volume_global"].shape)
-    for key in first_batch.keys():
-        if key not in "answer":
-            first_batch[key] = first_batch[key].to(device)
-
-    # ckpt_path = "./checkpoints_dt/close_vqa_yn_allitc_mmssl_BtSv/close_vqa_yn-m3d_vqa-dr1.0-FvisTruetxtTruemmFalse-E4-best/pytorch_model.bin"
-    # ckpt = torch.load(ckpt_path, map_location=device, weights_only=True)
-    # model.load_state_dict(ckpt, strict=True)
-
+    # first_batch = next(iter(dataloader))
+    # # print(first_batch["volume_global"].shape)
+    # for key in first_batch.keys():
+    #     if key not in "answer":
+    #         first_batch[key] = first_batch[key].to(device)
     # re = model(first_batch)
     # print(re)
 
     model.eval()
-    re = model.test_one_step(first_batch)
-    print(re)
+    # re = model.test_one_step(first_batch)
+    # print(re)
 
-    # re = model.test_on_dataloader(dataloader)
-    # print_dict_content(re)
+    re = model.test_on_dataloader(dataloader, gen_interval=20)
+    print_dict_content(re)

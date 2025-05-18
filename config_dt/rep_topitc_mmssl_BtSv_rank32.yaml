@@ -15,7 +15,7 @@ vision_encoder:
         drop_path_rate: 0.0
         norm_layer: "nn.LayerNorm"
         patch_norm: False
-        use_checkpoint: False
+        use_checkpoint: True
         spatial_dims: 3
         downsample: "merging"
         use_v2: False
@@ -60,11 +60,12 @@ tokenizer:
     max_len_report: 512
     max_len_sentence: 200
     max_num_sentences: 50
-    sentence_modeling: True
+    sentence_modeling: False
 
 
-pretrained_ckpt: "./checkpoints/visiontext_allitc_mmssl_BtSv/vl_ssl-swinvit-m3d_cap-dr1.0-E28-best/pytorch_model.bin"
-# pretrained_ckpt: ""
+pretrained_ckpt: "./checkpoints/visiontext_topitc_mmssl_BtSv/vl_ssl-swinvit-m3d_cap-dr1.0-E26-best/pytorch_model.bin"
+
+
 
 freeze:
     vision_encoder: True
@@ -82,7 +83,7 @@ downstream_task:
         access_token: "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"
         max_length: 750
         min_length: 1
-        rank: 8
+        rank: 32
 
         gen_max_length: 512
         gen_min_length: 1
@@ -90,4 +91,4 @@ downstream_task:
         # {'bos_token': '<|begin_of_text|>', 'eos_token': '<|eot_id|>', 'pad_token': '<|eot_id|>'}
         # bos_token_id: 128000, eos_token_id: 128009, pad_token_id: 0
 
-        # /root/miniconda3/envs/ctvlp-env-py310/lib/python3.10/site-packages/accelerate/utils/memory.py
+        

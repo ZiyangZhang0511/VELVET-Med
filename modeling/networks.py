@@ -519,7 +519,8 @@ class SentBertEncoder(nn.Module):
         
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
-        all_cross_attentions = () if output_attentions and self.config["add_cross_attention"] else None
+        # all_cross_attentions = () if output_attentions and self.config["add_cross_attention"] else None
+        all_cross_attentions = () if output_attentions else None
 
         if self.gradient_checkpointing and self.training:
             if use_cache:
@@ -564,7 +565,7 @@ class SentBertEncoder(nn.Module):
                 next_decoder_cache += (layer_outputs[-1],)
             if output_attentions:
                 all_self_attentions = all_self_attentions + (layer_outputs[1],)
-                if self.config["add_cross_attention"]:
+                if self.config["add_cross_attention"] or len(layer_outputs) >= 3:
                     all_cross_attentions = all_cross_attentions + (layer_outputs[2],)
 
             

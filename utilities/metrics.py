@@ -17,6 +17,9 @@ from pycocoevalcap.spice.spice import Spice
 from pycocoevalcap.meteor.meteor import Meteor
 from pycocoevalcap.rouge.rouge import Rouge
 
+from bert_score import score as b_score
+
+
 
 def compute_score_matrix(vis_embeds, txt_embeds, k_test=256, requires_itm=False):
     
@@ -176,7 +179,12 @@ def binary_cls_metrics(probs, ground_truth):
 def nlg_metrics(pred_captions, gt_captions):
 
     N = len(pred_captions)
-    predictions = {i: [pred_captions[i]] for i in range(N)}
+
+    if isinstance(pred_captions[0], str):
+        predictions = {i: [pred_captions[i]] for i in range(N)}
+    elif isinstance(pred_captions[0], list):
+        predictions = {i: [pred_captions[i][0]] for i in range(N)}
+    # predictions = {i: [pred_captions[i]] for i in range(N)}
 
     if isinstance(gt_captions[0], str):
         ground_truths = {i: [gt_captions[i]] for i in range(N)}
@@ -196,6 +204,19 @@ def nlg_metrics(pred_captions, gt_captions):
     m_score, _ = M.compute_score(ground_truths, predictions)
     r_score, _ = R.compute_score(ground_truths, predictions)
 
+
+    predictions_list = [prediction[0] for prediction in predictions.values()]
+    ground_truths_list = [ground_truth[0] for ground_truth in ground_truths.values()]
+    # print(len(predictions_list), len(ground_truths_list))
+    # print(predictions_list[0], ground_truths_list[0])
+    P, R, F1 = b_score(
+        predictions_list,
+        ground_truths_list,
+        # model_type="microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract",
+        lang="en",
+    )
+
+
     return {
         "B@1": b4_score[0],
         "B@2": b4_score[1],
@@ -204,6 +225,7 @@ def nlg_metrics(pred_captions, gt_captions):
         "CIDEr": c_score,
         # "SPICE": s_score,
         "METEOR": m_score,
-        "ROUGE_L": r_score
+        "ROUGE_L": r_score,
+        "BERTScore": F1.mean().item(),
     }
     

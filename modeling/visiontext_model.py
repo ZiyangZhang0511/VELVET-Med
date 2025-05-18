@@ -1100,7 +1100,7 @@ if __name__ == "__main__":
     device = "cuda"
 
     # visiontext_config_filepath = os.path.abspath(ConfigPath.VISIONTEXT_SSL)
-    visiontext_config_filepath = "./config_ssl/visiontext_topmiditc_BtSv.yaml"
+    visiontext_config_filepath = "./config_ssl/visiontext_allitc_0.5visssl_BtSv.yaml"
 
     data_root = os.path.abspath(DataPath.M3D_CAP)
     data_dir = os.path.join(data_root, "nii_down")
@@ -1108,7 +1108,7 @@ if __name__ == "__main__":
     mt_transforms = MonaiTransforms(num_samples=1)
     transforms = mt_transforms.load_ssl_transforms(mode="local")
     global_transforms = mt_transforms.load_ssl_transforms(mode="global")
-    dataset = M3DCAPDataset(data_dir, json_filepath, transforms, global_transforms, data_ratio=1.0, mode="val", pretrained_type="vl_ssl", config_path=visiontext_config_filepath)
+    dataset = M3DCAPDataset(data_dir, json_filepath, transforms, global_transforms, data_ratio=0.8, mode="val", pretrained_type="vl_ssl", config_path=visiontext_config_filepath)
     print(len(dataset))
     dataloader = DataLoader(dataset, batch_size=8, num_workers=8, shuffle=False, collate_fn=collate_fn)
     first_batch = next(iter(dataloader))
@@ -1123,7 +1123,7 @@ if __name__ == "__main__":
         visiontext_config = yaml.safe_load(f)
 
     model = VisionTextSSL(visiontext_config).to(device)
-    print(model)
+    # print(model)
 
     num_trainable_params = count_params(model)
     print(f"Number of trainable parameters of whole model: {num_trainable_params:.2f}M")
@@ -1132,7 +1132,7 @@ if __name__ == "__main__":
     num_trainable_params = count_params(model.text_ssl.text_model)
     print(f"Number of trainable parameters of text model: {num_trainable_params:.2f}M")
 
-    ckpt_path = "./checkpoints/visiontext_topmiditc_BtSv/vl_ssl-swinvit-m3d_cap-dr1.0-E37-best/pytorch_model.bin"
+    ckpt_path = "./checkpoints/visiontext_allitc_0.5visssl_BtSv/vl_ssl-swinvit-m3d_cap-dr1.0-E49/pytorch_model.bin"
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=True)
     model.load_state_dict(ckpt, strict=True)
 

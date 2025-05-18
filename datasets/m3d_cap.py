@@ -332,6 +332,7 @@ class M3DCAPDataset(Dataset):
             with open(txt_filepath, "r") as f:
                 text = f.read()
             sentences_list = custom_split(text)
+            print(sentences_list)
 
             if self.text_model_type == "sentbert":
                 input_ids, token_type_ids, attention_mask = self.tokenizer.encode_report(sentences_list)
@@ -356,8 +357,6 @@ class M3DCAPDataset(Dataset):
             return_dict["input_ids"] = input_ids
             return_dict["token_type_ids"] = token_type_ids
             return_dict["attention_mask"] = attention_mask
-
-        
 
         return return_dict
 

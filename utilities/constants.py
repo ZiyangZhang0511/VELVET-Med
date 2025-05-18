@@ -121,3 +121,20 @@ class SliceMap:
             "volume-covid19-A-0722_day047.nii.gz": 18,
         }
     }
+
+instructions_list = [
+    "Can you provide a caption consists of findings for this medical image?",
+    "Describe the findings of the medical image you see.",
+    "Please caption this medical scan with findings.",
+    "What is the findings of this image?",
+    "Describe this medical scan with findings.",
+    "Please write a caption consists of findings for this image.",
+    "Can you summarize with findings the images presented?",
+    "Please caption this scan with findings.",
+    "Please provide a caption consists of findings for this medical image.",
+    "Can you provide a summary consists of findings of this radiograph?",
+    "What are the findings presented in this medical scan?",
+    "Please write a caption consists of findings for this scan.",
+    "Can you provide a description consists of findings of this medical scan?",
+    "Please caption this medical scan with findings.",
+]

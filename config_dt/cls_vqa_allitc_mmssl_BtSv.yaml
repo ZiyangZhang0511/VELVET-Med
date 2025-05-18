@@ -15,7 +15,7 @@ vision_encoder:
         drop_path_rate: 0.0
         norm_layer: "nn.LayerNorm"
         patch_norm: False
-        use_checkpoint: False
+        use_checkpoint: True
         spatial_dims: 3
         downsample: "merging"
         use_v2: False
@@ -64,30 +64,13 @@ tokenizer:
 
 
 pretrained_ckpt: "./checkpoints/visiontext_allitc_mmssl_BtSv/vl_ssl-swinvit-m3d_cap-dr1.0-E28-best/pytorch_model.bin"
-# pretrained_ckpt: ""
 
 freeze:
     vision_encoder: True
     text_encoder: True
     mm_adapter: False
     mm_encoder: False
-    
 
 downstream_task:
-    task_type: "report_gen"  # choose from "cls_vqa_yn", "close_vqa_yn", "open_vqa_yn", "close_vqa_mc", "open_vqa_mc"
+    task_type: "cls_vqa_yn"  # choose from "cls_vqa_yn", "close_vqa_yn", "open_vqa_yn", "close_vqa_mc", "open_vqa_mc"
     txt_hidden_size: 768
-    llm:
-        hidden_size: 4096
-        model_id: "ContactDoctor/Bio-Medical-Llama-3-8B"
-        access_token: "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"
-        max_length: 750
-        min_length: 1
-        rank: 8
-
-        gen_max_length: 512
-        gen_min_length: 1
-
-        # {'bos_token': '<|begin_of_text|>', 'eos_token': '<|eot_id|>', 'pad_token': '<|eot_id|>'}
-        # bos_token_id: 128000, eos_token_id: 128009, pad_token_id: 0
-
-        # /root/miniconda3/envs/ctvlp-env-py310/lib/python3.10/site-packages/accelerate/utils/memory.py

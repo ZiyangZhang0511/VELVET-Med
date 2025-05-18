@@ -85,5 +85,8 @@ downstream_task:
         min_length: 1
         rank: 8
 
+        gen_max_length: 50
+        gen_min_length: 1
+
         # {'bos_token': '<|begin_of_text|>', 'eos_token': '<|eot_id|>', 'pad_token': '<|eot_id|>'}
         # bos_token_id: 128000, eos_token_id: 128009, pad_token_id: 0

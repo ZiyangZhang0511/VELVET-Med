@@ -63,7 +63,7 @@ tokenizer:
     sentence_modeling: True
 
 
-pretrained_ckpt: "./checkpoints/visiontext_allitc_mmssl_BtSv/vl_ssl-swinvit-m3d_cap-dr1.0-E28-best/pytorch_model.bin"
+pretrained_ckpt: "./checkpoints/visiontext_allitc_mmssl_visssl_txtssl_BtSv/vl_ssl-swinvit-m3d_cap-dr1.0-E31-best/pytorch_model.bin"
 # pretrained_ckpt: ""
 
 freeze:

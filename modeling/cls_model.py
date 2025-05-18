@@ -99,7 +99,7 @@ class CLSModel(nn.Module):
         txt_hidden_size = self.config_dt["txt_hidden_size"]
         self.classifier = nn.Sequential(
             nn.Linear(txt_hidden_size, txt_hidden_size),
-            nn.ReLU(),
+            nn.GELU(),
             nn.LayerNorm(txt_hidden_size),
             nn.Linear(txt_hidden_size, 1),
         )
@@ -123,10 +123,10 @@ class CLSModel(nn.Module):
         mm_adpater_stata_dict = OrderedDict()
 
         for name, params in state_dict.items():
-            if "vision_ssl." in name:
+            if "vision_ssl.vision_encoder." in name:
                 name = name.replace("vision_ssl.vision_encoder.", "")
                 vision_encoder_stata_dict[name] = params
-            elif "text_ssl." in name:
+            elif "text_ssl.text_model." in name:
                 name = name.replace("text_ssl.text_model.", "")
                 text_model_stata_dict[name] = params
             elif "mm_adpater." in name:
@@ -309,15 +309,20 @@ class CLSModel(nn.Module):
 
 
 if __name__ == "__main__":
-    device = "cuda"
+    device = "cuda:3"
 
-    config_path = "./config_dt/cls_vqa_BtSv.yaml" 
+    config_path = "./config_dt/cls_vqa_allitc_mmssl_visssl_txtssl_BtSv.yaml" 
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
 
     model = CLSModel(config).to(device)
+    model.device = device
     # print(model)
 
+    ckpt_path = "./checkpoints_dt/cls_vqa_allitc_mmssl_visssl_txtssl_BtSv/cls_vqa_yn-m3d_vqa-dr1.0-FvisFalsetxtFalsemmFalse-E3-best/pytorch_model.bin"
+    ckpt = torch.load(ckpt_path, map_location=device, weights_only=True)
+    model.load_state_dict(ckpt, strict=True)
+   
     data_root = os.path.abspath(DataPath.M3D_CAP)
     data_dir = os.path.join(data_root, "nii_down")
     csv_dir = os.path.abspath(DataPath.M3D_VQA)
@@ -325,8 +330,8 @@ if __name__ == "__main__":
     mt_transforms = MonaiTransforms(num_samples=1)
     global_transforms = mt_transforms.load_vqa_transforms(mode="global")
 
-    dataset = M3DVQADataset(data_dir, csv_dir, global_transforms, data_ratio=0.01, task_type="cls_vqa_yn", mode="val", config_path=config_path)
-    dataloader = DataLoader(dataset, batch_size=4, num_workers=0, collate_fn=collate_fn)
+    dataset = M3DVQADataset(data_dir, csv_dir, global_transforms, data_ratio=1.0, task_type="cls_vqa_yn", mode="val", config_path=config_path)
+    dataloader = DataLoader(dataset, batch_size=12, num_workers=8, collate_fn=collate_fn)
 
     first_batch = next(iter(dataloader))
     # print(first_batch["volume_global"].shape)

@@ -116,7 +116,7 @@ def train_function(model, train_dataloader, val_dataloader, args):
         with open(best_loss_filepath, 'rb') as file:
             best_val_loss = pickle.load(file)
         accelerator.print(f"current best loss: {best_val_loss:2.4f}")
-        accelerator.load_state(ckpt_save_dir + f"/{ckpt_stem}-E{cur_epoch}-best")
+        accelerator.load_state(ckpt_save_dir + f"/{ckpt_stem}-E{cur_epoch}")
 
 
     if args.restart_optimizer:

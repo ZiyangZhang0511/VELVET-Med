@@ -34,23 +34,23 @@ class CLIP3DSSL(nn.Module):
 
         self.device = device
 
-        # self.vision_encoder = ViT(
-        #     in_channels=1,
-        #     img_size=(256, 256, 32),
-        #     patch_size=(16, 16, 4),
-        #     classification=True,
-        # )
-
-        self.vision_encoder = SwinTransformer(
-            in_chans=1,
-            embed_dim=48,
-            window_size=[7, 7, 7],
-            patch_size=[2, 2, 2],
-            depths=[2, 2, 2, 2],
-            num_heads=[3, 6, 12, 24],
-            use_checkpoint=True,
-            spatial_dims=3,
+        self.vision_encoder = ViT(
+            in_channels=1,
+            img_size=(256, 256, 32),
+            patch_size=(16, 16, 4),
+            classification=True,
         )
+
+        # self.vision_encoder = SwinTransformer(
+        #     in_chans=1,
+        #     embed_dim=48,
+        #     window_size=[7, 7, 7],
+        #     patch_size=[2, 2, 2],
+        #     depths=[2, 2, 2, 2],
+        #     num_heads=[3, 6, 12, 24],
+        #     use_checkpoint=True,
+        #     spatial_dims=3,
+        # )
 
         self.text_encoder = BertModel.from_pretrained("microsoft/BiomedVLP-CXR-BERT-general")
         # self.text_encoder = BertModel.from_pretrained("google-bert/bert-base-uncased")
@@ -83,11 +83,11 @@ class CLIP3DSSL(nn.Module):
 
         loss_dict = OrderedDict()
 
-        # _, hidden_states_list = self.vision_encoder(volume_vl)
-        # vis_features = hidden_states_list[-1][:, 0, :]
+        _, hidden_states_list = self.vision_encoder(volume_vl)
+        vis_features = hidden_states_list[-1][:, 0, :]
         
-        vis_features = self.vision_encoder(volume_vl)[-1]
-        vis_features = F.avg_pool3d(vis_features, kernel_size=3, stride=3).squeeze(dim=(2, 3, 4))
+        # vis_features = self.vision_encoder(volume_vl)[-1]
+        # vis_features = F.avg_pool3d(vis_features, kernel_size=3, stride=3).squeeze(dim=(2, 3, 4))
         # print(vis_features.size())
         
         
@@ -125,11 +125,11 @@ class CLIP3DSSL(nn.Module):
 
         output_dict = OrderedDict()
 
-        # _, hidden_states_list = self.vision_encoder(volume_vl)
-        # vis_features = hidden_states_list[-1][:, 0, :]
+        _, hidden_states_list = self.vision_encoder(volume_vl)
+        vis_features = hidden_states_list[-1][:, 0, :]
 
-        vis_features = self.vision_encoder(volume_vl)[-1]
-        vis_features = F.avg_pool3d(vis_features, kernel_size=3, stride=3).squeeze(dim=(2, 3, 4))
+        # vis_features = self.vision_encoder(volume_vl)[-1]
+        # vis_features = F.avg_pool3d(vis_features, kernel_size=3, stride=3).squeeze(dim=(2, 3, 4))
 
         outputs = self.text_encoder(
             input_ids=input_ids,

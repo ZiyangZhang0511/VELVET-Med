@@ -22,7 +22,7 @@ from .vision_transforms import MonaiTransforms
 
 from datasets import collate_fn
 from datasets.m3d_cap import M3DCAPDataset
-from datasets.m3d_vqa import M3DVQADataset
+from datasets.m3d_vqa import M3DVQADataset, M3DVQABaselineDataset
 from datasets.tcia_covid19 import TCIACOVID19Dataset
 
 
@@ -41,16 +41,23 @@ def remove_directory(dir_path):
 
 def get_dt_dataset(args):
 
-    if args.dataset_name == "m3d_vqa" and args.downstream_type in ["close_vqa_yn", "open_vqa_yn", "close_vqa_mc", "open_vqa_mc", "report_gen"]:
+    if args.dataset_name in ["m3d_cap", "m3d_vqa"] and args.downstream_type in ["close_vqa_yn", "open_vqa_yn", "close_vqa_mc", "open_vqa_mc", "report_gen"]:
         data_root = os.path.abspath(DataPath.M3D_CAP)
         data_dir = os.path.join(data_root, "nii_down")
         csv_dir = os.path.abspath(DataPath.M3D_VQA)
         
         mt_transforms = MonaiTransforms(num_samples=1)
-        global_transforms = mt_transforms.load_vqa_transforms(mode="global")
 
-        train_dataset = M3DVQADataset(data_dir, csv_dir, global_transforms, data_ratio=args.data_ratio, task_type=args.downstream_type, mode="train", config_path=args.config_path)
-        val_dataset = M3DVQADataset(data_dir, csv_dir, global_transforms, data_ratio=args.data_ratio, task_type=args.downstream_type, mode="val", config_path=args.config_path)
+        if args.vqa_baseline:
+            global_transforms = mt_transforms.load_vqa_transforms(mode="clip3d")
+            train_dataset = M3DVQABaselineDataset(data_dir, csv_dir, global_transforms, data_ratio=args.data_ratio, task_type=args.downstream_type, mode="train", config_path=args.config_path)
+            val_dataset = M3DVQABaselineDataset(data_dir, csv_dir, global_transforms, data_ratio=args.data_ratio, task_type=args.downstream_type, mode="val", config_path=args.config_path)
+        else:
+            global_transforms = mt_transforms.load_vqa_transforms(mode="global")
+            train_dataset = M3DVQADataset(data_dir, csv_dir, global_transforms, data_ratio=args.data_ratio, task_type=args.downstream_type, mode="train", config_path=args.config_path)
+            val_dataset = M3DVQADataset(data_dir, csv_dir, global_transforms, data_ratio=0.1, task_type=args.downstream_type, mode="val", config_path=args.config_path)
+
+    
 
     elif args.dataset_name == "m3d_vqa" and args.downstream_type in ["cls_vqa_yn"]:
         data_root = os.path.abspath(DataPath.M3D_CAP)
