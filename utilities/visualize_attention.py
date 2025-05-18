@@ -23,8 +23,8 @@ from utilities.vision_transforms import MonaiTransforms
 def get_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--ckpt_path", type=str, default="./checkpoints/visiontext_topitc_mmssl_BtSv/vl_ssl-swinvit-m3d_cap-dr1.0-E26-best/pytorch_model.bin")
-    parser.add_argument("--config_path", type=str, default="./config_ssl/visiontext_topitc_mmssl_BtSv.yaml")
+    parser.add_argument("--ckpt_path", type=str)
+    parser.add_argument("--config_path", type=str)
     parser.add_argument("--save_dir", type=str, default="./check_data")
     parser.add_argument("--device", type=str, default="cuda")
     
