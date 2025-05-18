@@ -147,20 +147,6 @@ if __name__ == "__main__":
     transforms = mt_transforms.load_ssl_transforms(mode="local")
     global_transforms = mt_transforms.load_ssl_transforms(mode="global")
     
-    # dataset = M3DCAPRawDataset(data_dir, info_filepath, transforms)
-    # dataloader = DataLoader(dataset, batch_size=2, num_workers=8, collate_fn=collate_fn)
-    # for batch in tqdm(dataloader):
-    #     pass
-
-
-    # lmdb_dir = "/home/olg7848/p32335/my_research/vlp_ct/data/m3d_cap/lmdb"
-    # lmdb_dataset = M3DCAPLMDBDataset(lmdb_dir, info_filepath, transforms)
-    # # lmdb_dataset[110]
-    # dataloader = DataLoader(lmdb_dataset, batch_size=2, num_workers=4, collate_fn=collate_fn)
-    # for batch in tqdm(dataloader):
-    #     # print(batch["subvolumes"].size())
-    #     # break
-    #     pass
 
     data_root = os.path.abspath(DataPath.M3D_CAP)
     data_dir = os.path.join(data_root, "nii_down")
