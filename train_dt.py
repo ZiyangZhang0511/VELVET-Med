@@ -10,7 +10,7 @@ from accelerate import DistributedDataParallelKwargs
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader, Subset, ConcatDataset
+from torch.utils.data import Dataset, DataLoader
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from pytorch_lightning import seed_everything
@@ -209,13 +209,8 @@ def main():
 
     ###======== prepare dataset and dataloader ========###
     train_dataset, val_dataset = utils.get_dt_dataset(args)
-    # subset = Subset(val_dataset, indices=list(range(0, 1000)))
-    # train_dataset = ConcatDataset([train_dataset, subset])
     print(len(train_dataset), len(val_dataset))
 
-    # if args.dataset_name == "tcia_covid19":
-        # slice_map = SliceMap.tcia_covid19_slice_map
-    # utils.visualize_transformed_data(train_dataset, 0, slice_map["train"], save=False)
     train_dataloader, val_dataloader = utils.get_dt_dataloader(train_dataset, val_dataset, args)
 
 
